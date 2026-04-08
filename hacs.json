@@ -1,5 +1,5 @@
 {
   "name": "FoxESS Cloud (Ceinmart Fork)",
-  "render_readme": true,
-  "homeassistant": "2024.1.0"
+  "content_directory": "custom_components/foxess",
+  "render_readme": true
 }
