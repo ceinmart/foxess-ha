@@ -80,6 +80,7 @@ CONF_XTZONE = "xtZone"
 CONF_GET_VARIABLES = "Restrict"
 CONF_V1_API = "Use_V1_Api"
 CONF_EVO = "Evo"
+CONF_SHOW_UNKNOWN_ZERO = "show_unknown_zero"
 RETRY_NEXT_SLOT = -1
 RETRY_IN_5_MINS = 25
 DNS_ERROR = 101
@@ -103,6 +104,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
         vol.Optional(CONF_GET_VARIABLES): cv.boolean,
         vol.Optional(CONF_V1_API): cv.boolean,
         vol.Optional(CONF_EVO): cv.boolean,
+        vol.Optional(CONF_SHOW_UNKNOWN_ZERO, default=False): cv.boolean, 
     }
 )
 
@@ -122,6 +124,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     RestrictGetVar = config.get(CONF_GET_VARIABLES)
     V1_Api = config.get(CONF_V1_API)
     Evo = config.get(CONF_EVO)
+    show_unknown_zero = config.get(CONF_SHOW_UNKNOWN_ZERO)
     _LOGGER.debug("API Key: %s", apiKey)
     _LOGGER.debug("Device SN: %s", devicesn)
     _LOGGER.debug("Device ID: %s", deviceID)
@@ -131,6 +134,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     _LOGGER.debug("Extended PV: %s", ExtPV)
     _LOGGER.debug("v1 Api Calls: %s", V1_Api)
     _LOGGER.debug("EVO: %s", Evo)
+    _LOGGER.debug("Show Unknown as Zero: %s", show_unknown_zero) 
     if V1_Api is not False:
         V1_Api = True
         _LOGGER.debug("v1 Api Calls Enabled")
@@ -1348,6 +1352,10 @@ class FoxESSPowerString(CoordinatorEntity, SensorEntity):
                 _LOGGER.debug("%s None", self._keyValue)
             else:
                 return self.coordinator.data["raw"][self._keyValue]
+        if value is None:
+            if self.coordinator.data.get("show_unknown_zero", False):
+                return 0
+            return None
         return None
 
 
@@ -1379,6 +1387,10 @@ class FoxESSCurrent(CoordinatorEntity, SensorEntity):
                 _LOGGER.debug("%s None", self._keyValue)
             else:
                 return self.coordinator.data["raw"][self._keyValue]
+        if value is None:
+            if self.coordinator.data.get("show_unknown_zero", False):
+                return 0
+            return None
         return None
 
 
@@ -1410,8 +1422,12 @@ class FoxESSFreq(CoordinatorEntity, SensorEntity):
                 _LOGGER.debug("%s None", self._keyValue)
             else:
                 return self.coordinator.data["raw"][self._keyValue]
+        if value is None:
+            if self.coordinator.data.get("show_unknown_zero", False):
+                return 0
+            return None
         return None
-
+    
 
 class FoxESSPower(CoordinatorEntity, SensorEntity):
     _attr_state_class: SensorStateClass = SensorStateClass.MEASUREMENT
@@ -1441,6 +1457,10 @@ class FoxESSPower(CoordinatorEntity, SensorEntity):
                 _LOGGER.debug("%s None", self._keyValue)
             else:
                 return self.coordinator.data["raw"][self._keyValue]
+        if value is None:
+            if self.coordinator.data.get("show_unknown_zero", False):
+                return 0
+            return None
         return None
 
 
@@ -1472,6 +1492,10 @@ class FoxESSVolt(CoordinatorEntity, SensorEntity):
                 _LOGGER.debug("%s None", self._keyValue)
             else:
                 return self.coordinator.data["raw"][self._keyValue]
+        if value is None:
+            if self.coordinator.data.get("show_unknown_zero", False):
+                return 0
+            return None
         return None
 
 
@@ -2108,6 +2132,10 @@ class FoxESSBatSoC(CoordinatorEntity, SensorEntity):
                 _LOGGER.debug("%s None", self._keyValue)
             else:
                 return self.coordinator.data["raw"][self._keyValue]
+        if value is None:
+            if self.coordinator.data.get("show_unknown_zero", False):
+                return 0
+            return None
         return None
 
     @property
@@ -2204,6 +2232,10 @@ class FoxESSTemp(CoordinatorEntity, SensorEntity):
                 _LOGGER.debug("%s None", self._keyValue)
             else:
                 return self.coordinator.data["raw"][self._keyValue]
+        if value is None:
+            if self.coordinator.data.get("show_unknown_zero", False):
+                return 0
+            return None
         return None
 
 
