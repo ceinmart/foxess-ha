@@ -1537,6 +1537,7 @@ class FoxESSEnergyGenerated(CoordinatorEntity, SensorEntity):
         _LOGGER.debug("Initiating Entity - %s", self._nameValue)
         self._attr_name = f"{name} - {self._nameValue}"
         self._attr_unique_id = f"{deviceID}{self._uniqueValue}"
+        self._last_known_value = None
         self.status = namedtuple(
             "status",
             [
@@ -1560,8 +1561,8 @@ class FoxESSEnergyGenerated(CoordinatorEntity, SensorEntity):
                     energygenerated = round(energygenerated, 3)
                 else:
                     energygenerated = 0
-            return energygenerated
-        return None
+            self._last_known_value = energygenerated
+            return self._last_known_value
 
 
 class FoxESSEnergyThroughput(CoordinatorEntity, SensorEntity):
@@ -1574,6 +1575,7 @@ class FoxESSEnergyThroughput(CoordinatorEntity, SensorEntity):
         _LOGGER.debug("Initiating Entity - Energy Throughput")
         self._attr_name = name + " - Energy Throughput"
         self._attr_unique_id = deviceID + "energy-throughput"
+        self._last_known_value = None
         self.status = namedtuple(
             "status",
             [
@@ -1595,8 +1597,8 @@ class FoxESSEnergyThroughput(CoordinatorEntity, SensorEntity):
                     energygenerated = round(energygenerated, 3)
                 else:
                     energygenerated = 0
-            return energygenerated
-        return None
+            self._last_known_value = energygenerated
+            return self._last_known_value
 
 
 class FoxESSEnergyGridConsumption(CoordinatorEntity, SensorEntity):
@@ -1609,6 +1611,7 @@ class FoxESSEnergyGridConsumption(CoordinatorEntity, SensorEntity):
         _LOGGER.debug("Initiating Entity - Grid Consumption")
         self._attr_name = name + " - Grid Consumption"
         self._attr_unique_id = deviceID + "grid-consumption"
+        self._last_known_value = None
         self.status = namedtuple(
             "status",
             [
@@ -1626,8 +1629,8 @@ class FoxESSEnergyGridConsumption(CoordinatorEntity, SensorEntity):
                 energygrid = 0
             else:
                 energygrid = self.coordinator.data["report"]["gridConsumption"]
-            return energygrid
-        return None
+            self._last_known_value = energygrid
+            return self._last_known_value
 
 
 class FoxESSEnergyFeedin(CoordinatorEntity, SensorEntity):
@@ -1640,6 +1643,7 @@ class FoxESSEnergyFeedin(CoordinatorEntity, SensorEntity):
         _LOGGER.debug("Initiating Entity - FeedIn")
         self._attr_name = name + " - FeedIn"
         self._attr_unique_id = deviceID + "feedIn"
+        self._last_known_value = None
         self.status = namedtuple(
             "status",
             [
@@ -1657,8 +1661,8 @@ class FoxESSEnergyFeedin(CoordinatorEntity, SensorEntity):
                 energyfeedin = 0
             else:
                 energyfeedin = self.coordinator.data["report"]["feedin"]
-            return energyfeedin
-        return None
+            self._last_known_value = energyfeedin
+            return self._last_known_value
 
 
 class FoxESSEnergyBatCharge(CoordinatorEntity, SensorEntity):
@@ -1671,6 +1675,7 @@ class FoxESSEnergyBatCharge(CoordinatorEntity, SensorEntity):
         _LOGGER.debug("Initiating Entity - Bat Charge")
         self._attr_name = name + " - Bat Charge"
         self._attr_unique_id = deviceID + "bat-charge"
+        self._last_known_value = None
         self.status = namedtuple(
             "status",
             [
@@ -1688,8 +1693,8 @@ class FoxESSEnergyBatCharge(CoordinatorEntity, SensorEntity):
                 energycharge = 0
             else:
                 energycharge = self.coordinator.data["report"]["chargeEnergyToTal"]
-            return energycharge
-        return None
+            self._last_known_value = energycharge
+            return self._last_known_value
 
 class FoxESSMaxBatChargeCurrent(CoordinatorEntity, SensorEntity):
     _attr_state_class: SensorStateClass = SensorStateClass.MEASUREMENT
@@ -1762,6 +1767,7 @@ class FoxESSEnergyBatDischarge(CoordinatorEntity, SensorEntity):
         _LOGGER.debug("Initiating Entity - Bat Discharge")
         self._attr_name = name + " - Bat Discharge"
         self._attr_unique_id = deviceID + "bat-discharge"
+        self._last_known_value = None
         self.status = namedtuple(
             "status",
             [
@@ -1781,8 +1787,8 @@ class FoxESSEnergyBatDischarge(CoordinatorEntity, SensorEntity):
                 energydischarge = self.coordinator.data["report"][
                     "dischargeEnergyToTal"
                 ]
-            return energydischarge
-        return None
+            self._last_known_value = energydischarge
+            return self._last_known_value
 
 
 class FoxESSEnergyLoad(CoordinatorEntity, SensorEntity):
@@ -1795,6 +1801,7 @@ class FoxESSEnergyLoad(CoordinatorEntity, SensorEntity):
         _LOGGER.debug("Initiating Entity - Load")
         self._attr_name = name + " - Load"
         self._attr_unique_id = deviceID + "load"
+        self._last_known_value = None
         self.status = namedtuple(
             "status",
             [
@@ -1827,6 +1834,7 @@ class FoxESSPVEnergyTotal(CoordinatorEntity, SensorEntity):
         _LOGGER.debug("Initiating Entity - PV Energy Total")
         self._attr_name = name + " - PVEnergyTotal"
         self._attr_unique_id = deviceID + "PVEnergyTotal"
+        self._last_known_value = None
         self.status = namedtuple(
             "status",
             [
@@ -1973,6 +1981,7 @@ class FoxESSEnergySolar(CoordinatorEntity, SensorEntity):
         _LOGGER.debug("Initiating Entity - Solar")
         self._attr_name = name + " - Solar"
         self._attr_unique_id = deviceID + "solar"
+        self._last_known_value = None
         self.status = namedtuple(
             "status",
             [
