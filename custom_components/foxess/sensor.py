@@ -18,6 +18,7 @@ from homeassistant.components.sensor import (
     PLATFORM_SCHEMA,
     SensorEntity,
 )
+from homeassistant.helpers.restore_state import RestoreEntity
 
 
 from homeassistant.const import (
@@ -161,6 +162,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         "battery": {},
         "addressbook": {},
         "online": False,
+        "show_unknown_zero": show_unknown_zero,
     }
     allData["addressbook"]["hasBattery"] = False  # assume no battery is fitted for now
     allData["addressbook"]["status"] = "3"  # assume inverter is off-line for now
@@ -1524,7 +1526,7 @@ class FoxESSPowerFactor(CoordinatorEntity, SensorEntity):
         return None
 
 
-class FoxESSEnergyGenerated(CoordinatorEntity, SensorEntity):
+class FoxESSEnergyGenerated(CoordinatorEntity, RestoreEntity):
     _attr_state_class: SensorStateClass = SensorStateClass.TOTAL_INCREASING
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
@@ -1546,26 +1548,43 @@ class FoxESSEnergyGenerated(CoordinatorEntity, SensorEntity):
             ],
         )
 
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        state = await self.async_get_last_state()
+        if state and state.state not in ["unknown", "unavailable", None]:
+            try:
+                self._last_known_value = float(state.state)
+            except ValueError:
+                self._last_known_value = None
+
     @property
     def native_value(self) -> float | None:
-        if self._keyValue not in self.coordinator.data["reportDailyGeneration"]:
-            _LOGGER.debug("%s None", self._keyValue)
-        else:
-            if self.coordinator.data["reportDailyGeneration"][self._keyValue] == 0:
-                energygenerated = 0
+        if self.coordinator.data.get("online", False):
+            if self._keyValue not in self.coordinator.data["reportDailyGeneration"]:
+                _LOGGER.debug("%s None", self._keyValue)
             else:
-                energygenerated = self.coordinator.data["reportDailyGeneration"][
-                    self._keyValue
-                ]
-                if energygenerated > 0:
-                    energygenerated = round(energygenerated, 3)
+                if self.coordinator.data["reportDailyGeneration"][self._keyValue] == 0:
+                    energygenerated = 0.0
                 else:
-                    energygenerated = 0
-            self._last_known_value = energygenerated
-            return self._last_known_value
+                    energygenerated = float(
+                        self.coordinator.data["reportDailyGeneration"][self._keyValue]
+                    )
+                    if energygenerated > 0:
+                        energygenerated = round(energygenerated, 3)
+                    else:
+                        energygenerated = 0.0
+                self._last_known_value = energygenerated
+        return self._last_known_value
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "last_known_value": getattr(self, "_last_known_value", None),
+            "inverter_online": self.coordinator.data.get("online", False),
+        }
 
 
-class FoxESSEnergyThroughput(CoordinatorEntity, SensorEntity):
+class FoxESSEnergyThroughput(CoordinatorEntity, RestoreEntity):
     _attr_state_class: SensorStateClass = SensorStateClass.TOTAL_INCREASING
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
@@ -1584,24 +1603,41 @@ class FoxESSEnergyThroughput(CoordinatorEntity, SensorEntity):
             ],
         )
 
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        state = await self.async_get_last_state()
+        if state and state.state not in ["unknown", "unavailable", None]:
+            try:
+                self._last_known_value = float(state.state)
+            except ValueError:
+                self._last_known_value = None
+
     @property
-    def native_value(self) -> str | None:
-        if "energyThroughput" not in self.coordinator.data["raw"]:
-            _LOGGER.debug("raw Energy Throughput None")
-        else:
-            if self.coordinator.data["raw"]["energyThroughput"] == 0:
-                energygenerated = 0
+    def native_value(self) -> float | None:
+        if self.coordinator.data.get("online", False) and self.coordinator.data.get("raw"):
+            if "energyThroughput" not in self.coordinator.data["raw"]:
+                _LOGGER.debug("raw Energy Throughput None")
             else:
-                energygenerated = self.coordinator.data["raw"]["energyThroughput"]
-                if energygenerated > 0:
-                    energygenerated = round(energygenerated, 3)
+                if self.coordinator.data["raw"]["energyThroughput"] == 0:
+                    energygenerated = 0.0
                 else:
-                    energygenerated = 0
-            self._last_known_value = energygenerated
-            return self._last_known_value
+                    energygenerated = float(self.coordinator.data["raw"]["energyThroughput"])
+                    if energygenerated > 0:
+                        energygenerated = round(energygenerated, 3)
+                    else:
+                        energygenerated = 0.0
+                self._last_known_value = energygenerated
+        return self._last_known_value
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "last_known_value": getattr(self, "_last_known_value", None),
+            "inverter_online": self.coordinator.data.get("online", False),
+        }
 
 
-class FoxESSEnergyGridConsumption(CoordinatorEntity, SensorEntity):
+class FoxESSEnergyGridConsumption(CoordinatorEntity, RestoreEntity):
     _attr_state_class: SensorStateClass = SensorStateClass.TOTAL_INCREASING
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
@@ -1620,20 +1656,37 @@ class FoxESSEnergyGridConsumption(CoordinatorEntity, SensorEntity):
             ],
         )
 
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        state = await self.async_get_last_state()
+        if state and state.state not in ["unknown", "unavailable", None]:
+            try:
+                self._last_known_value = float(state.state)
+            except ValueError:
+                self._last_known_value = None
+
     @property
-    def native_value(self) -> str | None:
-        if "gridConsumption" not in self.coordinator.data["report"]:
-            _LOGGER.debug("report gridConsumption None")
-        else:
-            if self.coordinator.data["report"]["gridConsumption"] == 0:
-                energygrid = 0
+    def native_value(self) -> float | None:
+        if self.coordinator.data.get("online", False):
+            if "gridConsumption" not in self.coordinator.data["report"]:
+                _LOGGER.debug("report gridConsumption None")
             else:
-                energygrid = self.coordinator.data["report"]["gridConsumption"]
-            self._last_known_value = energygrid
-            return self._last_known_value
+                if self.coordinator.data["report"]["gridConsumption"] == 0:
+                    energygrid = 0.0
+                else:
+                    energygrid = float(self.coordinator.data["report"]["gridConsumption"])
+                self._last_known_value = energygrid
+        return self._last_known_value
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "last_known_value": getattr(self, "_last_known_value", None),
+            "inverter_online": self.coordinator.data.get("online", False),
+        }
 
 
-class FoxESSEnergyFeedin(CoordinatorEntity, SensorEntity):
+class FoxESSEnergyFeedin(CoordinatorEntity, RestoreEntity):
     _attr_state_class: SensorStateClass = SensorStateClass.TOTAL_INCREASING
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
@@ -1652,20 +1705,37 @@ class FoxESSEnergyFeedin(CoordinatorEntity, SensorEntity):
             ],
         )
 
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        state = await self.async_get_last_state()
+        if state and state.state not in ["unknown", "unavailable", None]:
+            try:
+                self._last_known_value = float(state.state)
+            except ValueError:
+                self._last_known_value = None
+
     @property
-    def native_value(self) -> str | None:
-        if "feedin" not in self.coordinator.data["report"]:
-            _LOGGER.debug("report feedin None")
-        else:
-            if self.coordinator.data["report"]["feedin"] == 0:
-                energyfeedin = 0
+    def native_value(self) -> float | None:
+        if self.coordinator.data.get("online", False):
+            if "feedin" not in self.coordinator.data["report"]:
+                _LOGGER.debug("report feedin None")
             else:
-                energyfeedin = self.coordinator.data["report"]["feedin"]
-            self._last_known_value = energyfeedin
-            return self._last_known_value
+                if self.coordinator.data["report"]["feedin"] == 0:
+                    energyfeedin = 0.0
+                else:
+                    energyfeedin = float(self.coordinator.data["report"]["feedin"])
+                self._last_known_value = energyfeedin
+        return self._last_known_value
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "last_known_value": getattr(self, "_last_known_value", None),
+            "inverter_online": self.coordinator.data.get("online", False),
+        }
 
 
-class FoxESSEnergyBatCharge(CoordinatorEntity, SensorEntity):
+class FoxESSEnergyBatCharge(CoordinatorEntity, RestoreEntity):
     _attr_state_class: SensorStateClass = SensorStateClass.TOTAL_INCREASING
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
@@ -1684,17 +1754,34 @@ class FoxESSEnergyBatCharge(CoordinatorEntity, SensorEntity):
             ],
         )
 
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        state = await self.async_get_last_state()
+        if state and state.state not in ["unknown", "unavailable", None]:
+            try:
+                self._last_known_value = float(state.state)
+            except ValueError:
+                self._last_known_value = None
+
     @property
-    def native_value(self) -> str | None:
-        if "chargeEnergyToTal" not in self.coordinator.data["report"]:
-            _LOGGER.debug("report chargeEnergyToTal None")
-        else:
-            if self.coordinator.data["report"]["chargeEnergyToTal"] == 0:
-                energycharge = 0
+    def native_value(self) -> float | None:
+        if self.coordinator.data.get("online", False):
+            if "chargeEnergyToTal" not in self.coordinator.data["report"]:
+                _LOGGER.debug("report chargeEnergyToTal None")
             else:
-                energycharge = self.coordinator.data["report"]["chargeEnergyToTal"]
-            self._last_known_value = energycharge
-            return self._last_known_value
+                if self.coordinator.data["report"]["chargeEnergyToTal"] == 0:
+                    energycharge = 0.0
+                else:
+                    energycharge = float(self.coordinator.data["report"]["chargeEnergyToTal"])
+                self._last_known_value = energycharge
+        return self._last_known_value
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "last_known_value": getattr(self, "_last_known_value", None),
+            "inverter_online": self.coordinator.data.get("online", False),
+        }
 
 class FoxESSMaxBatChargeCurrent(CoordinatorEntity, SensorEntity):
     _attr_state_class: SensorStateClass = SensorStateClass.MEASUREMENT
@@ -1757,7 +1844,7 @@ class FoxESSMaxBatDischargeCurrent(CoordinatorEntity, SensorEntity):
         return None
 
 
-class FoxESSEnergyBatDischarge(CoordinatorEntity, SensorEntity):
+class FoxESSEnergyBatDischarge(CoordinatorEntity, RestoreEntity):
     _attr_state_class: SensorStateClass = SensorStateClass.TOTAL_INCREASING
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
@@ -1776,22 +1863,39 @@ class FoxESSEnergyBatDischarge(CoordinatorEntity, SensorEntity):
             ],
         )
 
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        state = await self.async_get_last_state()
+        if state and state.state not in ["unknown", "unavailable", None]:
+            try:
+                self._last_known_value = float(state.state)
+            except ValueError:
+                self._last_known_value = None
+
     @property
-    def native_value(self) -> str | None:
-        if "dischargeEnergyToTal" not in self.coordinator.data["report"]:
-            _LOGGER.debug("report dischargeEnergyToTal None")
-        else:
-            if self.coordinator.data["report"]["dischargeEnergyToTal"] == 0:
-                energydischarge = 0
+    def native_value(self) -> float | None:
+        if self.coordinator.data.get("online", False):
+            if "dischargeEnergyToTal" not in self.coordinator.data["report"]:
+                _LOGGER.debug("report dischargeEnergyToTal None")
             else:
-                energydischarge = self.coordinator.data["report"][
-                    "dischargeEnergyToTal"
-                ]
-            self._last_known_value = energydischarge
-            return self._last_known_value
+                if self.coordinator.data["report"]["dischargeEnergyToTal"] == 0:
+                    energydischarge = 0.0
+                else:
+                    energydischarge = float(
+                        self.coordinator.data["report"]["dischargeEnergyToTal"]
+                    )
+                self._last_known_value = energydischarge
+        return self._last_known_value
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "last_known_value": getattr(self, "_last_known_value", None),
+            "inverter_online": self.coordinator.data.get("online", False),
+        }
 
 
-class FoxESSEnergyLoad(CoordinatorEntity, SensorEntity):
+class FoxESSEnergyLoad(CoordinatorEntity, RestoreEntity):
     _attr_state_class: SensorStateClass = SensorStateClass.TOTAL_INCREASING
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
@@ -1810,21 +1914,39 @@ class FoxESSEnergyLoad(CoordinatorEntity, SensorEntity):
             ],
         )
 
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        state = await self.async_get_last_state()
+        if state and state.state not in ["unknown", "unavailable", None]:
+            try:
+                self._last_known_value = float(state.state)
+            except ValueError:
+                self._last_known_value = None
+
     @property
-    def native_value(self) -> str | None:
-        if "loads" not in self.coordinator.data["report"]:
-            _LOGGER.debug("report loads None")
-        else:
-            if self.coordinator.data["report"]["loads"] == 0:
-                energyload = 0
+    def native_value(self) -> float | None:
+        if self.coordinator.data.get("online", False):
+            if "loads" not in self.coordinator.data["report"]:
+                _LOGGER.debug("report loads None")
             else:
-                energyload = self.coordinator.data["report"]["loads"]
-            # round
-            return round(energyload, 3)
-        return None
+                if self.coordinator.data["report"]["loads"] == 0:
+                    energyload = 0.0
+                else:
+                    energyload = float(self.coordinator.data["report"]["loads"])
+                # round
+                energyload = round(energyload, 3)
+                self._last_known_value = energyload
+        return self._last_known_value
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "last_known_value": getattr(self, "_last_known_value", None),
+            "inverter_online": self.coordinator.data.get("online", False),
+        }
 
 
-class FoxESSPVEnergyTotal(CoordinatorEntity, SensorEntity):
+class FoxESSPVEnergyTotal(CoordinatorEntity, RestoreEntity):
     _attr_state_class: SensorStateClass = SensorStateClass.TOTAL_INCREASING
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
@@ -1843,18 +1965,36 @@ class FoxESSPVEnergyTotal(CoordinatorEntity, SensorEntity):
             ],
         )
 
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        state = await self.async_get_last_state()
+        if state and state.state not in ["unknown", "unavailable", None]:
+            try:
+                self._last_known_value = float(state.state)
+            except ValueError:
+                self._last_known_value = None
+
     @property
-    def native_value(self) -> str | None:
-        if "PVEnergyTotal" not in self.coordinator.data["report"]:
-            _LOGGER.debug("report PVEnergyTotal None")
-        else:
-            if self.coordinator.data["report"]["PVEnergyTotal"] == 0:
-                energyload = 0
+    def native_value(self) -> float | None:
+        if self.coordinator.data.get("online", False):
+            if "PVEnergyTotal" not in self.coordinator.data["report"]:
+                _LOGGER.debug("report PVEnergyTotal None")
             else:
-                energyload = self.coordinator.data["report"]["PVEnergyTotal"]
-            # round
-            return round(energyload, 3)
-        return None
+                if self.coordinator.data["report"]["PVEnergyTotal"] == 0:
+                    energyload = 0.0
+                else:
+                    energyload = float(self.coordinator.data["report"]["PVEnergyTotal"])
+                # round
+                energyload = round(energyload, 3)
+                self._last_known_value = energyload
+        return self._last_known_value
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "last_known_value": getattr(self, "_last_known_value", None),
+            "inverter_online": self.coordinator.data.get("online", False),
+        }
 
 
 class FoxESSInverter(CoordinatorEntity, SensorEntity):
@@ -1971,7 +2111,7 @@ class FoxESSRunningState(CoordinatorEntity, SensorEntity):
         return None
 
 
-class FoxESSEnergySolar(CoordinatorEntity, SensorEntity):
+class FoxESSEnergySolar(CoordinatorEntity, RestoreEntity):
     _attr_state_class: SensorStateClass = SensorStateClass.TOTAL_INCREASING
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR
@@ -1990,37 +2130,55 @@ class FoxESSEnergySolar(CoordinatorEntity, SensorEntity):
             ],
         )
 
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        state = await self.async_get_last_state()
+        if state and state.state not in ["unknown", "unavailable", None]:
+            try:
+                self._last_known_value = float(state.state)
+            except ValueError:
+                self._last_known_value = None
+
     @property
     def native_value(self) -> float | None:
-        if "loads" not in self.coordinator.data["report"]:
-            loads = 0
-        else:
-            loads = float(self.coordinator.data["report"]["loads"])
+        if self.coordinator.data.get("online", False):
+            if "loads" not in self.coordinator.data["report"]:
+                loads = 0.0
+            else:
+                loads = float(self.coordinator.data["report"]["loads"])
 
-        if "chargeEnergyToTal" not in self.coordinator.data["report"]:
-            charge = 0
-        else:
-            charge = float(self.coordinator.data["report"]["chargeEnergyToTal"])
+            if "chargeEnergyToTal" not in self.coordinator.data["report"]:
+                charge = 0.0
+            else:
+                charge = float(self.coordinator.data["report"]["chargeEnergyToTal"])
 
-        if "feedin" not in self.coordinator.data["report"]:
-            feedIn = 0
-        else:
-            feedIn = float(self.coordinator.data["report"]["feedin"])
+            if "feedin" not in self.coordinator.data["report"]:
+                feedIn = 0.0
+            else:
+                feedIn = float(self.coordinator.data["report"]["feedin"])
 
-        if "gridConsumption" not in self.coordinator.data["report"]:
-            gridConsumption = 0
-        else:
-            gridConsumption = float(self.coordinator.data["report"]["gridConsumption"])
+            if "gridConsumption" not in self.coordinator.data["report"]:
+                gridConsumption = 0.0
+            else:
+                gridConsumption = float(self.coordinator.data["report"]["gridConsumption"])
 
-        if "dischargeEnergyToTal" not in self.coordinator.data["report"]:
-            discharge = 0
-        else:
-            discharge = float(self.coordinator.data["report"]["dischargeEnergyToTal"])
+            if "dischargeEnergyToTal" not in self.coordinator.data["report"]:
+                discharge = 0.0
+            else:
+                discharge = float(self.coordinator.data["report"]["dischargeEnergyToTal"])
 
-        energysolar = round((loads + charge + feedIn - gridConsumption - discharge), 3)
-        if energysolar < 0:
-            energysolar = 0
-        return round(energysolar, 3)
+            energysolar = round((loads + charge + feedIn - gridConsumption - discharge), 3)
+            if energysolar < 0:
+                energysolar = 0.0
+            self._last_known_value = round(energysolar, 3)
+        return self._last_known_value
+
+    @property
+    def extra_state_attributes(self):
+        return {
+            "last_known_value": getattr(self, "_last_known_value", None),
+            "inverter_online": self.coordinator.data.get("online", False),
+        }
 
 
 class FoxESSSolarPower(CoordinatorEntity, SensorEntity):
