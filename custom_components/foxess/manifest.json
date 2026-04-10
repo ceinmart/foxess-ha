@@ -1,7 +1,7 @@
 {
   "domain": "foxess",
   "name": "HA & FoxESSCloud (Dev Mode)",
-  "version": "0.4.1",
+  "version": "0.4.3",
   "documentation": "https://github.com/ceinmart/foxess-ha",
   "issue_tracker": "https://github.com/ceinmart/foxess-ha/issues",
   "codeowners": ["@ceinmart"]
