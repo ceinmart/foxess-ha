@@ -1,7 +1,7 @@
 {
   "domain": "foxess",
   "name": "FoxESS Cloud (Ceinmart Fork)",
-  "version": "0.4.3",
+  "version": "0.4.4",
   "documentation": "https://github.com/ceinmart/foxess-ha",
   "issue_tracker": "https://github.com/ceinmart/foxess-ha/issues",
   "codeowners": ["@ceinmart"],
